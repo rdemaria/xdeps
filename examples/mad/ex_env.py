@@ -23,7 +23,3 @@ for aa in range(100,106):
 
 #%timeit m.v.on_x1=aa
 #%timeit myf(aa)
-
-
-
-
