@@ -136,12 +136,22 @@ class Manager:
     """
 
     def __init__(self):
-        self.tasks = {}
         self.containers = {}
+        self.tasks = {}
         self.rdeps = defaultdict(list)
         self.rtasks = defaultdict(list)
         self.deptasks = defaultdict(list)
         self.tartasks = defaultdict(list)
+
+    def clone(self,containers):
+        other=self.__class__()
+        for k in self.containers:
+            other.containers[k]=other.ref(containers[k],k)
+        other.tasks    =other.tasks.copy()
+        other.rdeps    =other.rdeps.copy()
+        other.rtasks   =other.rtasks.copy()
+        other.deptasks =other.deptasks.copy()
+        other.tartasks =other.tartasks.copy()
 
     def ref(self, container=None, label="_"):
         """Return a ref to an instance (or dict) associated to a label.
