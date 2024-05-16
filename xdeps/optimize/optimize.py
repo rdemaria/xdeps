@@ -564,6 +564,20 @@ class Optimize:
 
         return_scalar = {"fsolve": False, "bfgs": True, "jacobian": False}[solver]
 
+        # Set knobs
+        if check_limits is False:
+            vary_vals = self._extract_knob_values()
+            for vv, val in zip(self.vary, vary_vals):
+                if vv.active:
+                    if check_limits and vv.limits is not None and vv.limits[0] is not None:
+                        if val < vv.limits[0]:
+                            vv.container[vv.name]= vv.limits[0]
+                            print(f"Knob {vv.name} is below lower limit, reset!")
+                    if check_limits and vv.limits is not None and vv.limits[1] is not None:
+                        if val > vv.limits[1]:
+                            print(f"Knob {vv.name} is above upper limit, reset!")
+                            vv.container[vv.name]= vv.limits[0]
+
         _err = MeritFunctionForMatch(
             vary=vary,
             targets=targets,
