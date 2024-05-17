@@ -599,7 +599,9 @@ class Optimize:
         )
 
         if not self.check_limits:
+            self.add_point_to_log()
             self._clip_to_limits()
+
         self.add_point_to_log()
 
     def step(
