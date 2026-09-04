@@ -8,6 +8,7 @@ from . import madxutils
 from .table import Table
 from .optimize import (Optimize, Vary, Target, TargetList, VaryList, Action, MeritFunctionForMatch)
 from .functions import FunctionPieceWiseLinear
+from .refs import piecewise, where
 
 from ._version import __version__
 
@@ -24,5 +25,7 @@ __all__ = [
     "Action",
     "MeritFunctionForMatch",
     "FunctionPieceWiseLinear",
+    "piecewise",
+    "where",
     "__version__",
 ]

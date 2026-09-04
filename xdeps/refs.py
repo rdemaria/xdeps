@@ -147,6 +147,27 @@ class CompactFormatter:
 
         return f"{fname}({', '.join(all_args)})"
 
+    def repr_piecewise(self, cases: Tuple[Pair, ...], otherwise: Any):
+        formatted_cases = []
+        for condition, value in cases:
+            if isinstance(condition, BaseRef):
+                condition = condition._formatted(self)
+            else:
+                condition = repr(condition)
+            if isinstance(value, BaseRef):
+                value = value._formatted(self)
+            else:
+                value = repr(value)
+            formatted_cases.append(f"({condition}, {value})")
+
+        if isinstance(otherwise, BaseRef):
+            otherwise = otherwise._formatted(self)
+        else:
+            otherwise = repr(otherwise)
+
+        args = ", ".join(formatted_cases)
+        return f"piecewise({args}, otherwise={otherwise})"
+
 
 @cython.cclass
 class BaseRef:
@@ -1215,6 +1236,77 @@ class CallRef(BaseRef):
 
     def _formatted(self, formatter):
         return formatter.repr_call(self._func, self._args, self._kwargs)
+
+
+@cython.cclass
+class PiecewiseExpr(BaseRef):
+    """An ordered, scalar piecewise expression.
+
+    Conditions are evaluated in order and only the value belonging to the
+    first true condition is evaluated. If no condition is true, ``otherwise``
+    is evaluated.
+    """
+
+    _cases = cython.declare(tuple, visibility='readonly')
+    _otherwise = cython.declare(object, visibility='readonly')
+
+    def __cinit__(self, cases, otherwise):
+        self._cases = tuple(tuple(case) for case in cases)
+        self._otherwise = otherwise
+        self._hash = hash((self.__class__, self._cases, self._otherwise))
+
+    def _get_value(self):
+        for condition, value in self._cases:
+            if BaseRef._mk_value(condition):
+                return BaseRef._mk_value(value)
+        return BaseRef._mk_value(self._otherwise)
+
+    def _get_dependencies(self, out=None):
+        if out is None:
+            out = set()
+        for condition, value in self._cases:
+            if isinstance(condition, BaseRef):
+                condition._get_dependencies(out)
+            if isinstance(value, BaseRef):
+                value._get_dependencies(out)
+        if isinstance(self._otherwise, BaseRef):
+            self._otherwise._get_dependencies(out)
+        return out
+
+    def __reduce__(self):
+        """Instruct pickle to not pickle the hash."""
+        return type(self), (self._cases, self._otherwise)
+
+    def __repr__(self):
+        cases = ", ".join(
+            f"({condition!r}, {value!r})"
+            for condition, value in self._cases
+        )
+        return f"piecewise({cases}, otherwise={self._otherwise!r})"
+
+    def _formatted(self, formatter):
+        return formatter.repr_piecewise(self._cases, self._otherwise)
+
+
+def piecewise(*cases, otherwise):
+    """Build an ordered, scalar piecewise expression.
+
+    Each case is a ``(condition, value)`` pair. The value for the first true
+    condition is selected; ``otherwise`` is selected if none match.
+    """
+    if not cases:
+        raise ValueError("piecewise() requires at least one case")
+    for case in cases:
+        if not isinstance(case, (tuple, list)) or len(case) != 2:
+            raise TypeError(
+                "piecewise() cases must be (condition, value) pairs"
+            )
+    return PiecewiseExpr(cases, otherwise)
+
+
+def where(condition, if_true, if_false):
+    """Build a two-branch scalar piecewise expression."""
+    return PiecewiseExpr(((condition, if_true),), if_false)
 
 
 class RefCount(dict):

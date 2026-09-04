@@ -8,7 +8,7 @@ from copy import deepcopy
 import logging
 from typing import Set, Hashable
 
-from .refs import BaseRef, MutableRef, ObjectAttrRef, Ref, RefCount
+from .refs import BaseRef, MutableRef, ObjectAttrRef, Ref, RefCount, piecewise
 from .utils import plot_pdot
 from .utils import AttrDict
 from .sorting import toposort
@@ -480,7 +480,7 @@ class Manager:
             dct = self.containers
         for lhs, rhs in dump:
             lhs = eval(lhs, {}, dct)
-            rhs = eval(rhs, {}, dct)
+            rhs = eval(rhs, {"piecewise": piecewise}, dct)
             task = ExprTask(lhs, rhs)
             if lhs in self.tasks:
                 if overwrite:
